@@ -92,7 +92,7 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className='min-h-screen bg-[#0e121d] py-10 mt-15 sm:mt-0'>
+    <div className='min-h-screen bg-[#0e121d] py-10 mt-10 sm:mt-0'>
       <div className='container mx-auto px-4'>
         {/* System Stats */}
         <div className='bg-[#1c1f2a] rounded-lg p-6 mb-8'>
