@@ -24,7 +24,7 @@ const MockPayment = () => {
           
           <div className='bg-[#2c2f3a] p-4 rounded-lg mb-6'>
             <h3 className='text-white font-semibold mb-2'>Selected Plan</h3>
-            <p className='text-gray-400'>₹{plan?.price || '0'} for {plan?.duration || '0'} days</p>
+            <p className='text-gray-400'>Rs.{plan?.price || '0'} for {plan?.duration || '0'} days</p>
             <p className='text-gray-400'>Tokens Included: {plan?.tokens || '0'}</p>
           </div>
 
