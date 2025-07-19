@@ -54,7 +54,8 @@ A full-featured web application designed to manage gym memberships, class schedu
 3. **Frontend Setup**
    ```bash
    cd frontend
-   npm install
+   npm install axios react-icons react-router-dom react-toastify
+   npm install tailwindcss @tailwindcss/vite
 
 4. **Environment Variables**
    Create a `.env` file in both `backend` and `frontend` directories with the following variables:
