@@ -7,22 +7,34 @@ const router = express.Router();
 // Protect all routes
 router.use(protect);
 
-// Role-based access control middleware
-const authorize = (req, res, next) => {
-  if (req.user.role === 'admin') {
-    admin(req, res, next);
-  } else if (req.user.role === 'gym') {
-    gymOwner(req, res, next);
-  } else {
-    res.status(403).json({ 
-      success: false, 
-      message: 'Not authorized to access this route' 
+// Admin routes
+router.get(
+  '/export/:type',
+  (req, res, next) => {
+    if (req.user.role === 'admin') {
+      return admin(req, res, next);
+    }
+    return res.status(403).json({
+      success: false,
+      message: 'Not authorized to access this route'
     });
-  }
-};
+  },
+  exportReport
+);
 
-// Single endpoint for all report types
-router.get('/export/:type', authorize, exportReport);
-router.get('/export/:type/:format', authorize, exportReport);
+// Gym owner routes
+router.get(
+  '/gym/export/:type',
+  (req, res, next) => {
+    if (req.user.role === 'gym') {
+      return gymOwner(req, res, next);
+    }
+    return res.status(403).json({
+      success: false,
+      message: 'Not authorized to access this route'
+    });
+  },
+  exportReport
+);
 
 export default router;

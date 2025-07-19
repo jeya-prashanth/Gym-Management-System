@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect, authorize } from '../middleware/auth.js';
+import { protect, admin, gymOwner } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { validationSchemas } from '../middleware/validate.js';
 import {
@@ -19,27 +19,33 @@ import {
 
 const router = express.Router();
 
+// Protect all routes
 router.use(protect);
 
+// Member routes
 router.get('/my-balance', getMyTokenBalance);
 router.get('/my-transactions', 
   validate(validationSchemas.tokenTransactionList, 'query'),
   getMyTokenTransactions
 );
 
+// Public route (protected by token)
+router.get('/rate', getTokenRate);
+
+// Admin routes
 router.get('/stats', 
-  authorize('admin'),
+  admin,
   validate(validationSchemas.tokenStats, 'query'),
   getTokenStats
 );
 
+// Gym owner routes
 router.get('/gym-stats',
-  authorize('gym'),
+  gymOwner,
   getGymTokenStats
 );
 
-router.get('/rate', getTokenRate);
-
+// Token purchase flow
 router.post('/purchase',
   validate(validationSchemas.purchaseTokens),
   purchaseTokens

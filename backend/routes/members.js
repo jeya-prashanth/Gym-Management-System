@@ -1,34 +1,41 @@
 import express from 'express';
-import { protect, authorize } from '../middleware/auth.js';
+import { protect, admin, gymOwner } from '../middleware/auth.js';
 import {
   getMembers,
   getMemberById,
-  createMember,
-  updateMember,
-  deleteMember,
-  getMemberCheckIns,
-  getMemberSubscriptions,
-  updateMemberStatus,
-  searchMembers
+  getMemberProfile,
+  updateMemberProfile,
+  memberCheckIn,
+  memberCheckOut,
+  getCheckInHistory,
+  getTokenTransactions,
+  addTokens
 } from '../controllers/memberController.js';
 
 const router = express.Router();
 
+// All routes in this file are protected
 router.use(protect);
 
-router.route('/')
-  .get(authorize('admin', 'gym'), getMembers)
-  .post(authorize('admin'), createMember);
+// Member profile routes
+router.route('/profile')
+  .get(getMemberProfile)
+  .put(updateMemberProfile);
 
-router.get('/search', authorize('admin', 'gym'), searchMembers);
+// Check-in/Check-out routes
+router.post('/check-in', memberCheckIn);
+router.post('/check-out', memberCheckOut);
+router.get('/check-in/history', getCheckInHistory);
 
-router.route('/:id')
-  .get(authorize('admin', 'gym'), getMemberById)
-  .put(authorize('admin'), updateMember)
-  .delete(authorize('admin'), deleteMember);
+// Token management routes
+router.get('/tokens/transactions', getTokenTransactions);
+router.post('/tokens/add', admin, addTokens);
 
-router.get('/:id/checkins', authorize('admin', 'gym'), getMemberCheckIns);
-router.get('/:id/subscriptions', authorize('admin', 'gym'), getMemberSubscriptions);
-router.patch('/:id/status', authorize('admin'), updateMemberStatus);
+// Admin and gym owner routes
+const adminAndGym = [admin, gymOwner];
+
+// Admin only routes
+router.get('/', adminAndGym, getMembers);
+router.get('/:id', adminAndGym, getMemberById);
 
 export default router;

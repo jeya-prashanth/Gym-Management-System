@@ -1,15 +1,24 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaBars, FaTimes, FaBell, FaCog, FaUsers, FaBuilding, FaUserCircle } from 'react-icons/fa';
+import { FaBars, FaTimes, FaBuilding, FaUserCircle } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 import adminlogo from '../assets/logo_admin.png';
+import { useAuth } from '../contexts/AuthContext';
 
 const NavbarAdmin = ({ username }) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
-  const handleLogout = () => {
-    // Mock logout - clear role in future
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('You have been logged out successfully.');
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Failed to log out. Please try again.');
+    }
   };
 
   const renderAdminSection = () => (

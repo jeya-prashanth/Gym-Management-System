@@ -21,7 +21,10 @@ const config = {
   
   API_PREFIX: '/api/v1',
   
-  CORS_ORIGIN: process.env.CORS_ORIGIN || '*'
+  // Allow all origins in development, specific origins in production
+  CORS_ORIGIN: process.env.NODE_ENV === 'production' 
+    ? (process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()) : [])
+    : true
 };
 
 const requiredEnvVars = ['MONGO_URI'];

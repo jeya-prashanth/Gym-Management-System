@@ -2,51 +2,57 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaEye, FaEyeSlash, FaSave, FaTimes, FaPhone, FaMapMarkerAlt, FaEnvelope, FaBuilding } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import api from '../../utils/axios';
+import { useAuth } from '../../contexts/AuthContext';
 
 const EditGym = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
-    gymName: '',
+    name: '',
     email: '',
-    phoneNumber: '',
-    place: '',
+    phone: '',
+    address: '',
     password: '********' // Placeholder for password
   });
   
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditingPassword, setIsEditingPassword] = useState(false);
+  const [originalData, setOriginalData] = useState(null);
 
   // Fetch gym data when component mounts
   useEffect(() => {
-    // Simulate API call to fetch gym data
     const fetchGymData = async () => {
       try {
         setIsLoading(true);
-        // Replace with actual API call
-        const mockGymData = {
-          id,
-          gymName: 'Fitness Center',
-          email: 'fitness@example.com',
-          phoneNumber: '9876543210',
-          place: 'Chennai',
-        };
-        setFormData(prev => ({
-          ...prev,
-          ...mockGymData
-        }));
+        const response = await api.get(`/api/v1/gyms/${id}`);
+        const gymData = response.data.data;
+        
+        setOriginalData(gymData);
+        setFormData({
+          name: gymData.name,
+          email: gymData.email,
+          phone: gymData.phone,
+          address: gymData.address,
+          password: '********'
+        });
       } catch (error) {
-        toast.error('Failed to load gym data');
         console.error('Error fetching gym data:', error);
+        const errorMessage = error.response?.data?.message || 'Failed to load gym data';
+        toast.error(errorMessage);
+        navigate('/admin/manage-gyms');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchGymData();
-  }, [id]);
+    if (id) {
+      fetchGymData();
+    }
+  }, [id, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -56,28 +62,52 @@ const EditGym = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (isEditingPassword && formData.password.length < 6) {
+    if (isEditingPassword && formData.password !== '********' && formData.password.length < 6) {
       toast.error('Password must be at least 6 characters long');
       return;
     }
     
-    if (!/^\d{10}$/.test(formData.phoneNumber)) {
-      toast.error('Please enter a valid 10-digit phone number');
+    if (!/^\d{10,15}$/.test(formData.phone)) {
+      toast.error('Please enter a valid phone number (10-15 digits)');
       return;
     }
     
-    setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Updated gym data:', formData);
+    try {
+      setIsLoading(true);
+      
+      // Prepare update data
+      const updateData = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address
+      };
+      
+      // Only include password if it was changed
+      if (isEditingPassword && formData.password !== '********') {
+        updateData.password = formData.password;
+      }
+      
+      // Update gym data
+      await api.put(`/api/v1/gyms/${id}`, updateData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      
       toast.success('Gym updated successfully!');
-      setIsLoading(false);
       navigate('/admin/manage-gyms');
-    }, 1000);
+    } catch (error) {
+      console.error('Error updating gym:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to update gym';
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const togglePasswordEdit = () => {
@@ -129,12 +159,13 @@ const EditGym = () => {
               </div>
               <input
                 type='text'
-                name='gymName'
-                value={formData.gymName}
+                name='name'
+                value={formData.name}
                 onChange={handleChange}
                 className='w-full pl-10 pr-4 py-3 rounded-lg bg-[#2c2f3a] text-white border border-gray-600 focus:border-[#2196f3] focus:outline-none'
                 placeholder='Gym Name'
                 required
+                disabled={isLoading}
               />
             </div>
             
@@ -161,8 +192,8 @@ const EditGym = () => {
               </div>
               <input
                 type='tel'
-                name='phoneNumber'
-                value={formData.phoneNumber}
+                name='phone'
+                value={formData.phone}
                 onChange={handleChange}
                 className='w-full pl-10 pr-4 py-3 rounded-lg bg-[#2c2f3a] text-white border border-gray-600 focus:border-[#2196f3] focus:outline-none'
                 placeholder='Phone Number'
@@ -178,8 +209,8 @@ const EditGym = () => {
               </div>
               <input
                 type='text'
-                name='place'
-                value={formData.place}
+                name='address'
+                value={formData.address}
                 onChange={handleChange}
                 className='w-full pl-10 pr-4 py-3 rounded-lg bg-[#2c2f3a] text-white border border-gray-600 focus:border-[#2196f3] focus:outline-none'
                 placeholder='Gym Location'
@@ -188,13 +219,14 @@ const EditGym = () => {
             </div>
             
             {/* Password */}
-            <div className='relative'>
+            <div className='relative mt-4'>
               <div className='flex justify-between items-center mb-2'>
                 <label className='text-gray-300'>Password</label>
                 <button
                   type='button'
                   onClick={togglePasswordEdit}
                   className='text-sm text-[#2196f3] hover:underline'
+                  disabled={isLoading}
                 >
                   {isEditingPassword ? 'Cancel' : 'Change Password'}
                 </button>
@@ -208,15 +240,16 @@ const EditGym = () => {
                   name='password'
                   value={formData.password}
                   onChange={handleChange}
-                  className='w-full pl-10 pr-12 py-3 rounded-lg bg-[#2c2f3a] text-white border border-gray-600 focus:border-[#2196f3] focus:outline-none'
-                  placeholder='Password'
-                  disabled={!isEditingPassword}
+                  className='w-full pl-10 pr-12 py-3 rounded-lg bg-[#2c2f3a] text-white border border-gray-600 focus:border-[#2196f3] focus:outline-none disabled:opacity-50'
+                  placeholder='Enter new password'
+                  disabled={!isEditingPassword || isLoading}
                   required={isEditingPassword}
                 />
                 <button
                   type='button'
                   onClick={() => setShowPassword(!showPassword)}
-                  className='absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#2196f3]'
+                  className='absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#2196f3] disabled:opacity-50'
+                  disabled={!isEditingPassword || isLoading}
                 >
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
@@ -227,13 +260,13 @@ const EditGym = () => {
                 </p>
               )}
             </div>
-            
+
             {/* Action Buttons */}
-            <div className='flex justify-end space-x-4 pt-4'>
+            <div className='flex justify-end space-x-4 pt-6'>
               <button
                 type='button'
                 onClick={() => navigate('/admin/manage-gyms')}
-                className='px-6 py-3 border border-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors'
+                className='px-6 py-3 border border-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50'
                 disabled={isLoading}
               >
                 Cancel
@@ -241,7 +274,9 @@ const EditGym = () => {
               <button
                 type='submit'
                 disabled={isLoading}
-                className='flex items-center px-6 py-3 bg-[#2196f3] hover:bg-[#1c1f2a] border-2 border-[#2196f3] text-white rounded-lg transition-colors disabled:opacity-50'
+                className={`flex items-center px-6 py-3 ${
+                  isLoading ? 'bg-[#0d8aee]' : 'bg-[#2196f3] hover:bg-[#0d8aee]'
+                } text-white rounded-lg font-medium transition-colors`}
               >
                 <FaSave className='mr-2' />
                 {isLoading ? 'Saving...' : 'Save Changes'}

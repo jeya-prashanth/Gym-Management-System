@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash, FaPlus, FaMapMarkerAlt, FaPhone, FaEnvelope, FaLock, FaBuilding } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import api from '../../utils/axios';
 
 const CreateGym = () => {
   const [formData, setFormData] = useState({
@@ -24,42 +26,112 @@ const CreateGym = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const navigate = useNavigate();
+
+  const validateForm = () => {
+    if (!formData.gymName.trim()) {
+      toast.error('Gym name is required', { theme: 'dark' });
+      return false;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      toast.error('Please enter a valid email address', { theme: 'dark' });
+      return false;
+    }
+
+    if (!/^\d{10,15}$/.test(formData.phoneNumber)) {
+      toast.error('Please enter a valid 10-15 digit phone number', { theme: 'dark' });
+      return false;
+    }
+
+    if (!formData.place.trim()) {
+      toast.error('Address is required', { theme: 'dark' });
+      return false;
+    }
+
+    if (formData.password.length < 6) {
+      toast.error('Password must be at least 6 characters long', { theme: 'dark' });
+      return false;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match', { theme: 'dark' });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Basic validation
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-    
-    if (formData.password.length < 6) {
-      toast.error('Password must be at least 6 characters long');
-      return;
-    }
-    
-    if (!/^\d{10}$/.test(formData.phoneNumber)) {
-      toast.error('Please enter a valid 10-digit phone number');
-      return;
-    }
+    if (!validateForm()) return;
     
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Gym data to be submitted:', formData);
-      toast.success('Gym created successfully!');
-      // Reset form
-      setFormData({
-        gymName: '',
-        email: '',
-        phoneNumber: '',
-        place: '',
-        password: '',
-        confirmPassword: ''
+    try {
+      const gymData = {
+        name: formData.gymName,
+        email: formData.email,
+        phone: formData.phoneNumber,
+        address: formData.place,  // Changed from location to address
+        password: formData.password
+      };
+
+      const response = await api.post('/gyms', gymData);
+      
+      if (response.data.success) {
+        toast.success('Gym created successfully!', {
+          position: 'top-right',
+          autoClose: 3000,
+          theme:'dark'
+        });
+        
+        // Reset form
+        setFormData({
+          gymName: '',
+          email: '',
+          phoneNumber: '',
+          place: '',
+          password: '',
+          confirmPassword: ''
+        });
+        
+        // Optionally redirect to gyms list or dashboard
+        // navigate('/admin/gyms');
+      }
+    } catch (error) {
+      console.error('Error creating gym:', error);
+      let errorMessage = 'Failed to create gym. Please try again.';
+      
+      if (error.response) {
+        // Handle different HTTP status codes
+        switch (error.response.status) {
+          case 400:
+            errorMessage = 'Validation error. Please check your input.';
+            break;
+          case 401:
+            errorMessage = 'Unauthorized. Please log in again.';
+            break;
+          case 409:
+            errorMessage = 'A gym with this email or phone already exists.';
+            break;
+          case 500:
+            errorMessage = 'Server error. Please try again later.';
+            break;
+          default:
+            errorMessage = error.response.data?.message || errorMessage;
+        }
+      }
+      
+      toast.error(errorMessage, {
+        position: 'top-right',
+        autoClose: 3000,
+        theme:'dark'
       });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -187,7 +259,7 @@ const CreateGym = () => {
             <button
               type='submit'
               disabled={isLoading}
-              className='w-full flex justify-center items-center space-x-2 bg-[#2196f3] hover:bg-[#1c1f2a] border-2 border-[#2196f3] text-white py-3 px-6 rounded-lg transition-colors disabled:opacity-50'
+              className='w-full flex justify-center items-center space-x-2 bg-[#2196f3] hover:bg-[#1c1f2a] border-2 border-[#2196f3] text-white py-3 px-6 rounded-lg transition-colors disabled:opacity-70 disabled:cursor-not-allowed'
             >
               {isLoading ? (
                 'Creating...'

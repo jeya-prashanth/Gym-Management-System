@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash, FaPlus, FaTrash, FaEdit, FaSearch, FaBuilding } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import api from '../../utils/axios';
+import { useAuth } from '../../contexts/AuthContext';
 
 const ManageGym = () => {
   const navigate = useNavigate();
@@ -9,74 +11,85 @@ const ManageGym = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [gyms, setGyms] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
-  // Mock data - replace with API call in a real application
   useEffect(() => {
     const fetchGyms = async () => {
       try {
-        // Simulate API call
-        setTimeout(() => {
-          const mockGyms = [
-            {
-              id: '1',
-              name: 'Jaffna Fitness',
-              email: 'fitnessjaffna@gmail.com',
-              phone: '9876543210',
-              place: 'Jaffna',
-              password: 'gym123'
-            },
-            {
-              id: '2',
-              name: 'Colombo Fitness',
-              email: 'fitnesscolombo@gmail.com',
-              phone: '8765432109',
-              place: 'Colombo',
-              password: 'gym456'
-            },
-            {
-              id: '3',
-              name: 'Mannar Fitness',
-              email: 'fitnessmannar@gmail.com',
-              phone: '7654321098',
-              place: 'Mannar',
-              password: 'gym789'
-            }
-          ];
-          setGyms(mockGyms);
-          setIsLoading(false);
-        }, 500);
+        setIsLoading(true);
+        console.log('Fetching gyms...');
+        const response = await api.get('/api/v1/gyms', {
+          headers: {
+            'Authorization': `Bearer ${user?.token}`
+          }
+        });
+        
+        console.log('API Response:', response);
+        
+        if (response.data && response.data.success) {
+          setGyms(response.data.data || []);
+          console.log('Gyms data set:', response.data.data);
+        } else {
+          console.error('Unexpected response format:', response.data);
+          toast.error('Unexpected response format from server');
+          setGyms([]);
+        }
       } catch (error) {
         console.error('Error fetching gyms:', error);
-        toast.error('Failed to load gyms');
+        const errorMessage = error.response?.data?.message || 'Failed to load gyms. Please try again.';
+        console.error('Error details:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data
+        });
+        toast.error(errorMessage);
+        setGyms([]);
+      } finally {
         setIsLoading(false);
       }
     };
 
-    fetchGyms();
-  }, []);
+    if (user?.token) {
+      fetchGyms();
+    } else {
+      console.error('No user token found');
+      setIsLoading(false);
+      setGyms([]);
+    }
+  }, [user?.token]);
 
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this gym?')) {
-      // Simulate delete operation
-      setGyms(gyms.filter(gym => gym.id !== id));
-      toast.success('Gym deleted successfully');
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this gym? This action cannot be undone.')) {
+      try {
+        await api.delete(`/api/v1/gyms/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${user.token}`
+          }
+        });
+        setGyms(gyms.filter(gym => gym._id !== id));
+        toast.success('Gym deleted successfully');
+      } catch (error) {
+        console.error('Error deleting gym:', error);
+        const errorMessage = error.response?.data?.message || 'Failed to delete gym';
+        toast.error(errorMessage);
+      }
     }
   };
 
-  const togglePasswordVisibility = (id) => {
-    setShowPassword(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  };
+  // Removed unused togglePasswordVisibility function
 
-  const filteredGyms = gyms.filter(gym =>
-    Object.values(gym).some(
-      value =>
-        typeof value === 'string' &&
-        value.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+  const filteredGyms = gyms.filter(gym => {
+    if (!gym) return false;
+    
+    const searchableFields = ['name', 'email', 'phone', 'address'];
+    return searchableFields.some(field => {
+      // Safely access nested properties
+      const value = field.split('.').reduce((obj, key) => 
+        obj && typeof obj === 'object' ? obj[key] : null, gym);
+      
+      return value && String(value).toLowerCase().includes(searchTerm.toLowerCase());
+    });
+  });
 
   if (isLoading) {
     return (
@@ -133,40 +146,38 @@ const ManageGym = () => {
               <tbody className='bg-[#1c1f2a] divide-y divide-gray-700'>
                 {filteredGyms.length > 0 ? (
                   filteredGyms.map((gym) => (
-                    <tr key={gym.id} className='hover:bg-[#252936]'>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-white'>{gym.name}</td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-300'>{gym.place}</td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-300'>{gym.email}</td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-300'>{gym.phone}</td>
+                    <tr key={gym._id} className='hover:bg-[#252936]'>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-white'>
+                        {gym.name || 'N/A'}
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-300'>
+                        {gym.address || 'N/A'}
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-300'>
+                        {gym.owner?.email || gym.email || 'N/A'}
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-300'>
+                        {gym.phone || 'N/A'}
+                      </td>
                       <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-300'>
                         <div className='flex items-center'>
-                          {showPassword[gym.id] ? (
-                            <span className='mr-2'>{gym.password}</span>
-                          ) : (
-                            <span className='mr-2'>••••••••</span>
-                          )}
-                          <button
-                            onClick={() => togglePasswordVisibility(gym.id)}
-                            className='text-gray-400 hover:text-white'
-                            aria-label={showPassword[gym.id] ? 'Hide password' : 'Show password'}
-                          >
-                            {showPassword[gym.id] ? <FaEyeSlash /> : <FaEye />}
-                          </button>
+                          <span className='text-gray-500 italic'>Password hidden</span>
                         </div>
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap text-right text-sm font-medium'>
                         <div className='flex justify-end space-x-2'>
                           <button
-                            onClick={() => navigate(`/admin/edit-gym/${gym.id}`)}
+                            onClick={() => navigate(`/admin/edit-gym/${gym._id}`)}
                             className='text-blue-400 hover:text-blue-300 p-1 rounded-full hover:bg-blue-900/20 transition-colors'
                             title='Edit Gym'
                           >
                             <FaEdit />
                           </button>
                           <button
-                            onClick={() => handleDelete(gym.id)}
+                            onClick={() => handleDelete(gym._id)}
                             className='text-red-400 hover:text-red-300 p-1 rounded-full hover:bg-red-900/20 transition-colors'
                             title='Delete Gym'
+                            disabled={isLoading}
                           >
                             <FaTrash />
                           </button>

@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect, authorize } from '../middleware/auth.js';
+import { protect, admin, gymOwner } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { validationSchemas } from '../middleware/validate.js';
 import {
@@ -10,10 +10,6 @@ import {
   deleteClass,
   getClassAttendees,
   enrollInClass,
-  cancelEnrollment,
-  markAttendance,
-  getClassSchedule,
-  getAvailableClasses,
   getMemberClasses
 } from '../controllers/classController.js';
 
@@ -21,46 +17,17 @@ const router = express.Router();
 
 router.use(protect);
 
-router.route('/')
-  .get(getClasses)
-  .post(
-    authorize('admin', 'gym'),
-    validate(validationSchemas.class),
-    createClass
-  );
+const adminAndGym = [admin, gymOwner];
 
-router.get('/available', getAvailableClasses);
+router.get('/', getClasses);
+router.get('/:id', validate(validationSchemas.objectId, 'params'), getClassById);
+
 router.get('/my-classes', getMemberClasses);
-router.get('/schedule', getClassSchedule);
-
 router.post('/:id/enroll', validate(validationSchemas.objectId, 'params'), enrollInClass);
-router.post('/:id/cancel-enrollment', validate(validationSchemas.objectId, 'params'), cancelEnrollment);
 
-router.post('/:id/attendance',
-  authorize('admin', 'gym'),
-  validate(validationSchemas.objectId, 'params'),
-  validate(validationSchemas.markAttendance),
-  markAttendance
-);
-
-router.get('/:id/attendees',
-  authorize('admin', 'gym'),
-  validate(validationSchemas.objectId, 'params'),
-  getClassAttendees
-);
-
-router.route('/:id')
-  .get(validate(validationSchemas.objectId, 'params'), getClassById)
-  .put(
-    authorize('admin', 'gym'),
-    validate(validationSchemas.objectId, 'params'),
-    validate(validationSchemas.classUpdate),
-    updateClass
-  )
-  .delete(
-    authorize('admin', 'gym'),
-    validate(validationSchemas.objectId, 'params'),
-    deleteClass
-  );
+router.post('/', adminAndGym, validate(validationSchemas.class), createClass);
+router.put('/:id', adminAndGym, validate(validationSchemas.objectId, 'params'), validate(validationSchemas.class), updateClass);
+router.delete('/:id', admin, validate(validationSchemas.objectId, 'params'), deleteClass);
+router.get('/:id/attendees', adminAndGym, validate(validationSchemas.objectId, 'params'), getClassAttendees);
 
 export default router;

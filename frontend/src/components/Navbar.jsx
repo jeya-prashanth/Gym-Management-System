@@ -1,16 +1,34 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaUserCircle, FaSignOutAlt } from 'react-icons/fa';
+import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 import logo from '../assets/logo.png';
 
 const Navbar = ({ role, username, gymname }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const profileRef = useRef(null);
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
-  const handleLogout = () => {
-    // Handle logout logic here
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await logout();
+      // Add a state to indicate this is a logout action
+      navigate('/login', { 
+        state: { from: 'logout' },
+        replace: true
+      });
+      toast.success('You have been logged out successfully');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Failed to log out. Please try again.');
+    } finally {
+      setIsLoggingOut(false);
+      setIsProfileOpen(false);
+    }
   };
 
   useEffect(() => {
@@ -56,23 +74,14 @@ const Navbar = ({ role, username, gymname }) => {
               {isProfileOpen && (
                 <div className='origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50'>
                   <div className='py-1' role='menu' aria-orientation='vertical'>
-                    {/* <Link
-                      to='/member/profile'
-                      className='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100'
-                      role='menuitem'
-                      onClick={() => setIsProfileOpen(false)}
-                    >
-                      Your Profile
-                    </Link> */}
                     <button
-                      onClick={() => {
-                        handleLogout();
-                        setIsProfileOpen(false);
-                      }}
-                      className='w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center'
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      className='w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center disabled:opacity-70'
                       role='menuitem'
                     >
-                      <FaSignOutAlt className='mr-2' /> Sign out
+                      <FaSignOutAlt className='mr-2' />
+                      {isLoggingOut ? 'Logging out...' : 'Log out'}
                     </button>
                   </div>
                 </div>

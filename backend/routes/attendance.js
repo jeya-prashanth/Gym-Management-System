@@ -1,70 +1,28 @@
 import express from 'express';
-import { protect, authorize } from '../middleware/auth.js';
+import { protect, admin, gymOwner } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { validationSchemas } from '../middleware/validate.js';
 import {
-  checkInMember,
-  checkOutMember,
-  getAttendanceByDate,
+  checkIn,
+  checkOut,
   getMemberAttendance,
-  updateAttendance,
+  getClassAttendance,
   getAttendanceStats,
-  bulkUpdateAttendance,
-  getAttendanceByClass,
-  getMyAttendance,
-  getTodaysAttendance,
-  getGymAttendance
+  getActiveCheckIns
 } from '../controllers/attendanceController.js';
 
 const router = express.Router();
 
 router.use(protect);
 
-router.get('/my-attendance', getMyAttendance);
-router.get('/today', getTodaysAttendance);
+router.post('/checkin', validate(validationSchemas.checkIn), checkIn);
+router.post('/checkout', validate(validationSchemas.checkOut), checkOut);
+router.get('/member/:memberId', validate(validationSchemas.objectId, 'params'), getMemberAttendance);
 
-router.get('/stats', 
-  authorize('admin', 'gym'),
-  validate(validationSchemas.attendanceStats, 'query'), 
-  getAttendanceStats
-);
+const adminAndGym = [admin, gymOwner];
 
-router.get('/gym', 
-  authorize('gym'), 
-  getGymAttendance
-);
-
-router.post('/checkin', validate(validationSchemas.checkIn), checkInMember);
-router.post('/checkout', validate(validationSchemas.checkOut), checkOutMember);
-
-router.get('/date/:date', 
-  authorize('admin', 'gym'), 
-  validate(validationSchemas.dateParam, 'params'), 
-  getAttendanceByDate
-);
-
-router.get('/class/:classId',
-  validate(validationSchemas.objectId, 'params'),
-  getAttendanceByClass
-);
-
-router.get('/member/:memberId',
-  authorize('admin', 'gym'),
-  validate(validationSchemas.objectId, 'params'),
-  getMemberAttendance
-);
-
-router.post('/bulk-update',
-  authorize('admin', 'gym'),
-  validate(validationSchemas.bulkUpdateAttendance),
-  bulkUpdateAttendance
-);
-
-router.put('/:id',
-  authorize('admin', 'gym'),
-  validate(validationSchemas.objectId, 'params'),
-  validate(validationSchemas.updateAttendance),
-  updateAttendance
-);
+router.get('/active', adminAndGym, getActiveCheckIns);
+router.get('/class/:classId', adminAndGym, validate(validationSchemas.objectId, 'params'), getClassAttendance);
+router.get('/stats/:memberId', adminAndGym, validate(validationSchemas.objectId, 'params'), getAttendanceStats);
 
 export default router;

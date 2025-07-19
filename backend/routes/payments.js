@@ -1,60 +1,27 @@
 import express from 'express';
-import { protect, authorize } from '../middleware/auth.js';
+import { protect, admin, gymOwner } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { validationSchemas } from '../middleware/validate.js';
 import {
-  getPayments,
   createPayment,
+  getMemberPayments,
   getPaymentById,
-  updatePayment,
-  deletePayment,
-  initiatePayment,
-  verifyPayment,
-  getPaymentHistory,
-  getPaymentStats,
-  processRefund,
-  getMyPayments,
-  getMyPaymentHistory,
-  getGymPayments
+  getAllPayments,
+  refundPayment
 } from '../controllers/paymentController.js';
 
 const router = express.Router();
 
+// All routes in this file are protected
 router.use(protect);
 
-router.get('/my-payments', getMyPayments);
-router.get('/my/history', getMyPaymentHistory);
+// Member routes
+router.get('/my-payments', getMemberPayments);
 
-router.get('/gym', authorize('gym'), getGymPayments);
-router.get('/stats', authorize('admin'), getPaymentStats);
-router.get('/history', validate(validationSchemas.paymentHistory, 'query'), getPaymentHistory);
-
-router.post('/initiate', validate(validationSchemas.initiatePayment), initiatePayment);
-router.post('/verify', validate(validationSchemas.verifyPayment), verifyPayment);
-
-router.post('/refund/:id',
-  authorize('admin'),
-  validate(validationSchemas.objectId, 'params'),
-  validate(validationSchemas.processRefund),
-  processRefund
-);
-
-router.route('/')
-  .get(authorize('admin'), validate(validationSchemas.paymentList, 'query'), getPayments)
-  .post(authorize('admin'), validate(validationSchemas.createPayment), createPayment);
-
-router.route('/:id')
-  .get(authorize('admin'), validate(validationSchemas.objectId, 'params'), getPaymentById)
-  .put(
-    authorize('admin'),
-    validate(validationSchemas.objectId, 'params'),
-    validate(validationSchemas.updatePayment),
-    updatePayment
-  )
-  .delete(
-    authorize('admin'),
-    validate(validationSchemas.objectId, 'params'),
-    deletePayment
-  );
+// Admin routes
+router.get('/', admin, getAllPayments);
+router.post('/', admin, validate(validationSchemas.createPayment), createPayment);
+router.post('/:id/refund', admin, validate(validationSchemas.objectId, 'params'), refundPayment);
+router.get('/:id', admin, validate(validationSchemas.objectId, 'params'), getPaymentById);
 
 export default router;

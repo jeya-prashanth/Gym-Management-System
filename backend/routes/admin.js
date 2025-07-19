@@ -1,50 +1,34 @@
 import express from 'express';
-import { protect, authorize } from '../middleware/auth.js';
+import { protect, admin } from '../middleware/auth.js';
 import {
-  getUsers,
-  getUser,
-  createUser,
-  updateUser,
-  deleteUser,
-  updateUserStatus,
   getDashboardStats,
-  getTokenTransactions,
-  manageTokenPackage,
-  getTokenPackage,
-  updateTokenPackage,
-  deleteTokenPackage,
-  getGymStats,
-  getUserStats
+  createGym,
+  updateGym,
+  deleteGym,
+  getGyms,
+  getGymById,
+  getMembers
 } from '../controllers/adminController.js';
 
 const router = express.Router();
 
-router.use(protect);
-router.use(authorize('admin'));
+// All routes in this file are protected and require admin role
+router.use(protect, admin);
 
+// Dashboard Stats
 router.get('/stats', getDashboardStats);
-router.get('/gym-stats', getGymStats);
-router.get('/user-stats', getUserStats);
 
-router.route('/users')
-  .get(getUsers)
-  .post(createUser);
+// Gym Management
+router.route('/gyms')
+  .get(getGyms)
+  .post(createGym);
 
-router.route('/users/:id')
-  .get(getUser)
-  .put(updateUser)
-  .delete(deleteUser);
+router.route('/gyms/:id')
+  .get(getGymById)
+  .put(updateGym)
+  .delete(deleteGym);
 
-router.put('/users/:id/status', updateUserStatus);
-
-router.get('/tokens/transactions', getTokenTransactions);
-
-router.route('/tokens/packages')
-  .post(manageTokenPackage)
-  .get(getTokenPackage);
-
-router.route('/tokens/packages/:id')
-  .put(updateTokenPackage)
-  .delete(deleteTokenPackage);
+// Member Management
+router.get('/members', getMembers);
 
 export default router;

@@ -1,66 +1,35 @@
 import express from 'express';
 import { protect } from '../middleware/auth.js';
-import { validate } from '../middleware/validate.js';
-import { validationSchemas } from '../middleware/validate.js';
 import {
-  getProfile,
-  updateProfile,
-  updatePassword,
-  getTokenBalance,
-  getTokenTransactions,
-  getWorkoutHistory,
-  bookClass,
-  cancelBooking,
-  getBookings,
-  updateProfilePicture,
-  deleteAccount
+  getUsers,
+  getUserById,
+  createUser,
+  updateUser,
+  deleteUser,
+  toggleUserStatus
 } from '../controllers/userController.js';
 
 const router = express.Router();
 
+// Admin routes
 router.use(protect);
 
-router.get('/profile', getProfile);
-router.put('/profile', 
-  validate(validationSchemas.updateProfile),
-  updateProfile
-);
-router.put('/profile/picture', 
-  validate(validationSchemas.updateProfilePicture),
-  updateProfilePicture
-);
+// Get all users (admin only)
+router.get('/', getUsers);
 
-router.put('/password', 
-  validate(validationSchemas.updatePassword),
-  updatePassword
-);
+// Get single user (admin only)
+router.get('/:id', getUserById);
 
-router.get('/tokens/balance', getTokenBalance);
-router.get('/tokens/transactions', 
-  validate(validationSchemas.tokenTransactionList, 'query'),
-  getTokenTransactions
-);
+// Create new user (admin only)
+router.post('/', createUser);
 
-router.get('/workouts', 
-  validate(validationSchemas.workoutHistory, 'query'),
-  getWorkoutHistory
-);
+// Update user (admin only)
+router.put('/:id', updateUser);
 
-router.get('/bookings', 
-  validate(validationSchemas.bookingList, 'query'),
-  getBookings
-);
+// Delete user (admin only)
+router.delete('/:id', deleteUser);
 
-router.post('/bookings', 
-  validate(validationSchemas.bookClass),
-  bookClass
-);
-
-router.delete('/bookings/:id',
-  validate(validationSchemas.objectId, 'params'),
-  cancelBooking
-);
-
-router.delete('/account', deleteAccount);
+// Toggle user status (active/inactive)
+router.patch('/:id/status', toggleUserStatus);
 
 export default router;

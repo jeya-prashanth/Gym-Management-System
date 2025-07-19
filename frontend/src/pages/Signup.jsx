@@ -1,178 +1,182 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { FaEye, FaEyeSlash, FaUser } from 'react-icons/fa';
+import api from '../utils/axios';
+
+const validateEmail = (email) => {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(String(email).toLowerCase());
+};
+
+const validatePhone = (phone) => {
+  const re = /^[0-9]{10,15}$/;
+  return re.test(phone);
+};
 
 const Signup = () => {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    name: '',
     email: '',
     password: '',
     confirmPassword: '',
-    phone: '',
-    profilePicture: null
+    phone: ''
   });
   
+  const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
+  const validateForm = useCallback(() => {
+    const newErrors = {};
+    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
+    }
+    
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters long';
+    }
+    
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+    
+    if (formData.phone && !validatePhone(formData.phone)) {
+      newErrors.phone = 'Please enter a valid phone number (10-15 digits)';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData]);
+
   const handleChange = (e) => {
-    const { name, value, type, files } = e.target;
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'file' ? files[0] : value
+      [name]: value
     }));
+    
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
-      // Basic validation
-      if (formData.password !== formData.confirmPassword) {
-        toast.error('Passwords do not match');
-        return;
-      }
-
-      // Create form data for file upload
-      const formDataToSend = new FormData();
-      Object.keys(formData).forEach(key => {
-        if (formData[key] !== null) {
-          formDataToSend.append(key, formData[key]);
-        }
+      const { confirmPassword, ...registrationData } = formData;
+      
+      const response = await api.post('/auth/register', registrationData);
+      
+      toast.success('Registration successful! Redirecting to login...', {
+        position: 'top-right',
+        autoClose: 3000,
+        onClose: () => navigate('/login')
       });
-
-      // Add role as 'member'
-      formDataToSend.append('role', 'member');
-
-      // Here you would typically make an API call to your backend
-      // Example:
-      // const response = await fetch('/api/members/signup', {
-      //   method: 'POST',
-      //   body: formDataToSend,
-      //   // Don't set Content-Type header when using FormData
-      //   // The browser will set it automatically with the correct boundary
-      //   headers: {
-      //     'Accept': 'application/json'
-      //   }
-      // });
       
-      // For now, just simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // If successful
-      toast.success('Member registration successful! Please login.');
-      navigate('/login');
     } catch (error) {
-      console.error('Signup error:', error);
-      toast.error(error.message || 'Registration failed. Please try again.');
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (error.response) {
+        switch (error.response.status) {
+          case 1:
+            errorMessage = error.response.data?.message || 'Invalid input data';
+            break;
+          case 2:
+            errorMessage = 'An account with this email already exists';
+            break;
+          case 3:
+            errorMessage = 'Server error. Please try again later.';
+            break;
+          default:
+            errorMessage = error.response.data?.message || errorMessage;
+        }
+      } else if (error.request) {
+        errorMessage = 'No response from server. Please check your connection.';
+      }
+      
+      toast.error(errorMessage, {
+        position: 'top-right',
+        autoClose: 3000,
+        theme : 'dark'
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className='min-h-screen flex items-center justify-center bg-[#0e121d] p-4'>
-      <div className='bg-[#1c1f2a] p-6 rounded-lg w-full max-w-2xl'>
-        <div className='text-center mb-6'>
+    <div className='min-h-screen flex items-center justify-center p-4'>
+      <div className='bg-[#1c1f2a] p-8 rounded-lg w-full max-w-md shadow-xl border border-gray-700'>
+        <div className='text-center mb-8'>
           <div className='flex justify-center mb-4'>
-            <FaUser className='text-4xl text-[#2196f3]' />
+            <div className='bg-[#2196f3] p-3 rounded-full'>
+              <FaUser className='text-2xl text-white' />
+            </div>
           </div>
           <h2 className='text-2xl text-white font-bold'>Member Registration</h2>
-          <p className='text-gray-400 mt-1'>Create your member account</p>
+          <p className='text-gray-400 mt-2'>Create your member account to get started</p>
         </div>
         
-        <form onSubmit={handleSubmit} className='space-y-4'>
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <div>
-              <label htmlFor='firstName' className='block text-sm text-white font-medium mb-1'>First Name</label>
+        <form onSubmit={handleSubmit} className='space-y-5'>
+          {/* Name Field */}
+          <div>
+            <label htmlFor='name' className='block text-sm text-white font-medium mb-1'>Full Name</label>
+            <div className='relative'>
               <input
                 type='text'
-                id='firstName'
-                name='firstName'
-                value={formData.firstName}
+                id='name'
+                name='name'
+                value={formData.name}
                 onChange={handleChange}
-                className='w-full px-3 py-2 rounded-lg bg-[#2c2f3a] text-white border border-gray-600 focus:outline-none focus:border-[#2196f3]'
-                required
+                className={'w-full px-4 py-2.5 rounded-lg bg-[#2c2f3a] text-white border ' + (errors.name ? 'border-red-500' : 'border-gray-600') + ' focus:outline-none focus:border-[#2196f3] transition-colors'}
+                placeholder='Enter your full name'
               />
             </div>
-            <div>
-              <label htmlFor='lastName' className='block text-sm text-white font-medium mb-1'>Last Name</label>
-              <input
-                type='text'
-                id='lastName'
-                name='lastName'
-                value={formData.lastName}
-                onChange={handleChange}
-                className='w-full px-3 py-2 rounded-lg bg-[#2c2f3a] text-white border border-gray-600 focus:outline-none focus:border-[#2196f3]'
-                required
-              />
-            </div>
+            {errors.name && <p className='mt-1 text-sm text-red-400'>{errors.name}</p>}
           </div>
 
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <div>
-              <label htmlFor='email' className='block text-sm text-white font-medium mb-1'>Email</label>
+          {/* Email Field */}
+          <div>
+            <label htmlFor='email' className='block text-sm text-white font-medium mb-1'>Email</label>
+            <div className='relative'>
               <input
                 type='email'
                 id='email'
                 name='email'
                 value={formData.email}
                 onChange={handleChange}
-                className='w-full px-3 py-2 rounded-lg bg-[#2c2f3a] text-white border border-gray-600 focus:outline-none focus:border-[#2196f3]'
-                required
+                className={'w-full px-4 py-2.5 rounded-lg bg-[#2c2f3a] text-white border ' + (errors.email ? 'border-red-500' : 'border-gray-600') + ' focus:outline-none focus:border-[#2196f3] transition-colors'}
+                placeholder='Enter your email'
               />
             </div>
-            <div>
-              <label htmlFor='phone' className='block text-sm text-white font-medium mb-1'>Phone Number</label>
-              <input
-                type='tel'
-                id='phone'
-                name='phone'
-                value={formData.phone}
-                onChange={handleChange}
-                className='w-full px-3 py-2 rounded-lg bg-[#2c2f3a] text-white border border-gray-600 focus:outline-none focus:border-[#2196f3]'
-                required
-              />
-            </div>
+            {errors.email && <p className='mt-1 text-sm text-red-400'>{errors.email}</p>}
           </div>
 
-          {/* <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <div>
-              <label htmlFor='dob' className='block text-sm text-white font-medium mb-1'>Date of Birth</label>
-              <input
-                type='date'
-                id='dob'
-                name='dob'
-                value={formData.dob}
-                onChange={handleChange}
-                className='w-full px-3 py-2 rounded-lg bg-[#2c2f3a] text-white border border-gray-600 focus:outline-none focus:border-[#2196f3]'
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor='gender' className='block text-sm text-white font-medium mb-1'>Gender</label>
-              <select
-                id='gender'
-                name='gender'
-                value={formData.gender}
-                onChange={handleChange}
-                className='w-full px-3 py-2 rounded-lg bg-[#2c2f3a] text-white border border-gray-600 focus:outline-none focus:border-[#2196f3]'
-                required
-              >
-                <option value='male'>Male</option>
-                <option value='female'>Female</option>
-                <option value='other'>Other</option>
-              </select>
-            </div>
-          </div> */}
-
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <div className='relative'>
+            {/* Password Field */}
+            <div>
               <label htmlFor='password' className='block text-sm text-white font-medium mb-1'>Password</label>
               <div className='relative'>
                 <input
@@ -181,22 +185,23 @@ const Signup = () => {
                   name='password'
                   value={formData.password}
                   onChange={handleChange}
-                  minLength='6'
-                  className='w-full px-3 py-2 rounded-lg bg-[#2c2f3a] text-white border border-gray-600 focus:outline-none focus:border-[#2196f3] pr-10'
-                  required
+                  className={'w-full pr-10 px-4 py-2.5 rounded-lg bg-[#2c2f3a] text-white border ' + (errors.password ? 'border-red-500' : 'border-gray-600') + ' focus:outline-none focus:border-[#2196f3] transition-colors'}
+                  placeholder='Password'
                 />
                 <button
                   type='button'
                   onClick={() => setShowPassword(!showPassword)}
-                  className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#2196f3]'
+                  className='absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#2196f3] transition-colors'
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
-              <p className='text-xs text-gray-400 mt-1'>Minimum 6 characters</p>
+              {errors.password && <p className='mt-1 text-sm text-red-400'>{errors.password}</p>}
             </div>
 
-            <div className='relative'>
+            {/* Confirm Password Field */}
+            <div>
               <label htmlFor='confirmPassword' className='block text-sm text-white font-medium mb-1'>Confirm Password</label>
               <div className='relative'>
                 <input
@@ -205,58 +210,58 @@ const Signup = () => {
                   name='confirmPassword'
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className='w-full px-3 py-2 rounded-lg bg-[#2c2f3a] text-white border border-gray-600 focus:outline-none focus:border-[#2196f3] pr-10'
-                  required
+                  className={'w-full pr-10 px-4 py-2.5 rounded-lg bg-[#2c2f3a] text-white border ' + (errors.confirmPassword ? 'border-red-500' : 'border-gray-600') + ' focus:outline-none focus:border-[#2196f3] transition-colors'}
+                  placeholder='Confirm password'
                 />
                 <button
                   type='button'
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#2196f3]'
+                  className='absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#2196f3] transition-colors'
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                 >
                   {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
+              {errors.confirmPassword && <p className='mt-1 text-sm text-red-400'>{errors.confirmPassword}</p>}
             </div>
           </div>
 
+          {/* Phone Field */}
           <div>
-            <label htmlFor='profilePicture' className='block text-sm text-white font-medium mb-1'>Profile Picture</label>
-            <input
-              type='file'
-              id='profilePicture'
-              name='profilePicture'
-              accept='image/*'
-              onChange={handleChange}
-              className='w-full px-3 py-2 rounded-lg bg-[#2c2f3a] text-white border border-gray-600 focus:outline-none focus:border-[#2196f3] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#2196f3] file:text-white hover:file:bg-[#1c7ed6]'
-            />
+            <label htmlFor='phone' className='block text-sm text-white font-medium mb-1'>Phone Number (Optional)</label>
+            <div className='relative'>
+              <input
+                type='tel'
+                id='phone'
+                name='phone'
+                value={formData.phone}
+                onChange={handleChange}
+                className={'w-full px-4 py-2.5 rounded-lg bg-[#2c2f3a] text-white border ' + (errors.phone ? 'border-red-500' : 'border-gray-600') + ' focus:outline-none focus:border-[#2196f3] transition-colors'}
+                placeholder='Enter phone number'
+              />
+            </div>
+            {errors.phone && <p className='mt-1 text-sm text-red-400'>{errors.phone}</p>}
+            <p className='mt-1 text-xs text-gray-400'>9-15 digits, numbers only</p>
           </div>
 
+          {/* Submit Button */}
           <button
             type='submit'
             disabled={isLoading}
-            className={`w-full bg-[#1c1f2a] border-2 border-[#2196f3] hover:bg-[#2196f3] text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center ${
-              isLoading ? 'opacity-70 cursor-not-allowed' : ''
-            }`}
+            className='w-full bg-[#1c1f2a] border-2 border-[#2196f3] hover:bg-[#2196f3] text-white py-2 px-4 rounded-lg transition-colors h-11'
           >
-            {isLoading ? (
-              <div className="flex items-center gap-2">
-                <div className="border-4 border-t-4 border-white border-solid rounded-full w-5 h-5 animate-spin" />
-                  Creating Account...
-                </div>
-              ) : (
-                'Create Account'
-            )}
+            {isLoading ? 'Creating Account...' : 'Create Account'}
           </button>
-        </form>
 
-        <div className='text-center mt-4'>
-          <p className='text-sm text-white'>
-            Already have an account?{' '}
-            <Link to='/login' className='text-[#2196f3] hover:underline font-medium'>
-              Login
-            </Link>
-          </p>
-        </div>
+          <div className='text-center'>
+            <p className='text-sm text-gray-400'>
+              Already have an account?{' '}
+              <Link to='/login' className='text-[#2196f3] hover:underline font-medium'>
+                Login
+              </Link>
+            </p>
+          </div>
+        </form>
       </div>
     </div>
   );

@@ -4,13 +4,7 @@ const gymSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, maxlength: 100 },
   email: { type: String, required: true, trim: true, lowercase: true, match: [/^\S+@\S+\.\S+$/] },
   phone: { type: String, required: true, match: [/^[0-9\-\+]{9,15}$/] },
-  address: {
-    street: { type: String, required: true, trim: true },
-    city: { type: String, required: true, trim: true },
-    state: { type: String, trim: true },
-    country: { type: String, default: 'Colombo' },
-    pincode: { type: String, trim: true }
-  },
+  address: { type: String, required: true, trim: true },
   operatingHours: {
     weekdays: {
       open: { type: String, default: '06:00' },
@@ -24,7 +18,9 @@ const gymSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Member' }],
-  features: [{ name: String, isAvailable: { type: Boolean, default: true } }]
+  features: [{ name: String, 
+    isAvailable: { type: Boolean, default: true } 
+  }]
 }, {
   timestamps: true,
   toJSON: { 

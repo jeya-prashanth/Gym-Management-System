@@ -1,10 +1,9 @@
 import express from 'express';
-import { protect, authorize } from '../middleware/auth.js';
+import { protect, admin, gymOwner } from '../middleware/auth.js';
 import {
   getGyms,
   getGymById,
   searchGyms,
-  getNearbyGyms,
   createGym,
   updateGym,
   deleteGym,
@@ -18,24 +17,28 @@ import {
 
 const router = express.Router();
 
+// Public routes
 router.get('/', getGyms);
 router.get('/search', searchGyms);
-router.get('/nearby', getNearbyGyms);
 router.get('/:id', getGymById);
 
+// Protected routes
 router.use(protect);
 
+// Member routes
 router.get('/:id/classes', getGymClasses);
 
-router.get('/my/gym', authorize('gym'), getMyGym);
-router.put('/my/gym', authorize('gym'), updateMyGym);
-router.get('/my/gym/members', authorize('gym'), getGymMembers);
-router.get('/my/gym/stats', authorize('gym'), getMyGymStats);
+// Gym owner routes
+router.get('/my/gym', gymOwner, getMyGym);
+router.put('/my/gym', gymOwner, updateMyGym);
+router.get('/my/gym/members', gymOwner, getGymMembers);
+router.get('/my/gym/stats', gymOwner, getMyGymStats);
 
-router.post('/', authorize('admin'), createGym);
-router.put('/:id', authorize('admin'), updateGym);
-router.delete('/:id', authorize('admin'), deleteGym);
-router.get('/:id/members', authorize('admin'), getGymMembers);
-router.get('/:id/stats', authorize('admin'), getGymStats);
+// Admin routes
+router.post('/', admin, createGym);
+router.put('/:id', admin, updateGym);
+router.delete('/:id', admin, deleteGym);
+router.get('/:id/members', admin, getGymMembers);
+router.get('/:id/stats', admin, getGymStats);
 
 export default router;

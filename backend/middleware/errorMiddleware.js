@@ -46,8 +46,32 @@ const handleJwtError = (err) => {
 };
 
 const errorHandler = (err, req, res, next) => {
-  let error = { ...err };
-  error.message = err.message;
+  // Default error response
+  let error = {
+    statusCode: err.statusCode || 500,
+    message: err.message || 'Internal Server Error',
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  };
+
+  // Handle specific error types
+  if (err instanceof mongoose.Error) {
+    error = handleMongooseError(err);
+  } else if (err instanceof ZodError) {
+    error = handleZodError(err);
+  } else if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+    error = handleJwtError(err);
+  }
+
+  // Log error in development
+  if (process.env.NODE_ENV === 'development') {
+    console.error('Error:', {
+      message: error.message,
+      stack: error.stack,
+      path: req.path,
+      method: req.method,
+      body: req.body
+    });
+  }
   error.stack = process.env.NODE_ENV === 'production' ? '' : err.stack;
 
   // Handle Mongoose errors
@@ -78,12 +102,16 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // Send error response
-  res.status(error.statusCode || 500).json({
+  // Send JSON response
+  res.status(error.statusCode).json({
     success: false,
-    message: error.message || 'Internal Server Error',
-    ...(error.errors && { errors: error.errors }),
-    ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    message: error.message,
+    ...(process.env.NODE_ENV === 'development' && { 
+      stack: error.stack,
+      path: req.path,
+      method: req.method
+    }),
+    ...(error.errors && { errors: error.errors })
   });
 };
 
