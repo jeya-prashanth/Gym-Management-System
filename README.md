@@ -53,7 +53,7 @@ A full-featured web application designed to manage gym memberships, class schedu
 
 3. **Frontend Setup**
    ```bash
-   cd ../frontend
+   cd frontend
    npm install
 
 4. **Environment Variables**
