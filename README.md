@@ -29,6 +29,7 @@ A full-featured web application designed to manage gym memberships, class schedu
 - Axios 
 - React Icons
 - React Toastify 
+- Jwt-decode
 
 ### Backend
 - Node.js
@@ -38,6 +39,10 @@ A full-featured web application designed to manage gym memberships, class schedu
 - Bcrypt 
 - Express Validator
 - CORS 
+- Mongoose
+- dotenv
+- nodemon
+- zod
 
 ### Installation
 
@@ -50,12 +55,11 @@ A full-featured web application designed to manage gym memberships, class schedu
    ```bash
    cd backend
    npm install
-
+   
 3. **Frontend Setup**
    ```bash
    cd frontend
-   npm install axios react-icons react-router-dom react-toastify
-   npm install tailwindcss @tailwindcss/vite
+   npm install 
 
 4. **Environment Variables**
    Create a `.env` file in both `backend` and `frontend` directories with the following variables:
